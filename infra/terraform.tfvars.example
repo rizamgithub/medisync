@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars (gitignored) and adjust if defaults in variables.tf
+# don't fit your environment. Every variable has a sensible default, so this
+# file is optional.
+
+# project_name        = "medisync"
+# environment         = "prod"
+# location            = "southeastasia"
+# resource_group_name = "rg-medisync-prod"
+# owner_email         = "rizam.ibrahim.my@gmail.com"
