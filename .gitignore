@@ -1,0 +1,61 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+*_accessKeys.csv
+*access_key*
+*AccessKey*
+*secret*
+*Secret*
+*.pem
+*.key
+aws-credentials*
+
+# Local scratchpad / screenshots / personal notes
+.temp/
+.scratch/
+*.local.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build / coverage
+coverage/
+htmlcov/
+.coverage
+*.log

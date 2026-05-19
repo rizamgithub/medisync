@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment_env": "Set GITHUB_PERSONAL_ACCESS_TOKEN in your OS env before launching Claude Code. Azure auth happens via `az login --service-principal` using the medisync-admin SP; see docs/runbooks/02-azure-rbac.md. Do NOT put secrets in this file — it is committed to git.",
+
+  "env": {
+    "AZURE_DEFAULTS_GROUP": "rg-medisync-prod",
+    "AZURE_DEFAULTS_LOCATION": "southeastasia",
+    "FASTMCP_LOG_LEVEL": "ERROR"
+  },
+
+  "mcpServers": {
+    "_comment_pending_azure_mcp": "Microsoft's Azure MCP server (github.com/Azure/azure-mcp) is in preview as of 2026-05. Wiring deferred until it stabilizes. Until then, the agent uses `az` CLI directly via approved Bash permissions below.",
+
+    "github": {
+      "_comment": "Official GitHub MCP. Requires GITHUB_PERSONAL_ACCESS_TOKEN env var, fine-grained PAT scoped to the MediSync repo only.",
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ]
+    },
+
+    "context7": {
+      "_comment": "Live docs lookup for Azure SDK, Functions, Pydantic, Terraform azurerm. Prevents hallucinated APIs.",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  },
+
+  "permissions": {
+    "allow": [
+      "mcp__github",
+      "mcp__context7",
+      "Bash(uv:*)",
+      "Bash(uvx:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(terraform fmt*)",
+      "Bash(terraform validate*)",
+      "Bash(terraform plan*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(docker compose:*)",
+      "Bash(func:*)",
+      "Bash(az account show*)",
+      "Bash(az account list*)",
+      "Bash(az group show*)",
+      "Bash(az group list*)",
+      "Bash(az resource list*)",
+      "Bash(az cosmosdb*)",
+      "Bash(az functionapp show*)",
+      "Bash(az functionapp list*)",
+      "Bash(az monitor*)",
+      "Bash(az consumption*)",
+      "Bash(az version)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "ask": [
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(az login*)",
+      "Bash(az logout)",
+      "Bash(az * create*)",
+      "Bash(az * delete*)",
+      "Bash(az role assignment*)",
+      "Bash(git push*)",
+      "Bash(git commit*)"
+    ],
+    "deny": [
+      "Bash(az ad app create*)",
+      "Bash(az ad sp create*)",
+      "Bash(az account management-group*)",
+      "Bash(az billing*)",
+      "Bash(rm -rf*)"
+    ]
+  }
+}
