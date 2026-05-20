@@ -1,0 +1,8 @@
+# Runtime dependencies for the Azure Functions deployment (Oryx remote build).
+# Source of truth is pyproject.toml — regenerate after changing deps with:
+#   uv pip compile pyproject.toml -o requirements.txt
+azure-functions>=1.21.0
+azure-cosmos>=4.9.0
+azure-identity>=1.19.0
+azure-monitor-opentelemetry>=1.6.0
+pydantic>=2.10.0

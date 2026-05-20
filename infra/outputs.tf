@@ -26,9 +26,42 @@ output "cosmosdb_database_name" {
 }
 
 # Account keys are deliberately NOT exposed as outputs. They live in state
-# regardless, but surfacing them invites copy-paste leaks. Functions will read
-# data via managed identity + Cosmos data-plane RBAC (or Key Vault) in a later
-# runbook — not via output values.
+# regardless, but surfacing them invites copy-paste leaks. Functions read data
+# via managed identity + Cosmos data-plane RBAC (see identity.tf).
 
-# Add per-service outputs (function app hostname, etc.) as resources are
-# introduced in the *.tf files below.
+# --- Function Apps (runbook 09) ---
+
+output "function_app_names" {
+  description = "Function App names — pass to `func azure functionapp publish`."
+  value = {
+    user      = azurerm_linux_function_app.user.name
+    inventory = azurerm_linux_function_app.inventory.name
+    match     = azurerm_linux_function_app.match.name
+  }
+}
+
+output "function_app_hostnames" {
+  description = "Default HTTPS hostnames of the three Function Apps."
+  value = {
+    user      = azurerm_linux_function_app.user.default_hostname
+    inventory = azurerm_linux_function_app.inventory.default_hostname
+    match     = azurerm_linux_function_app.match.default_hostname
+  }
+}
+
+# --- Event Grid (runbook 09) ---
+
+output "eventgrid_topic_endpoint" {
+  description = "Event Grid topic endpoint the match service publishes to."
+  value       = azurerm_eventgrid_topic.main.endpoint
+}
+
+# The Event Grid topic access key is NOT output — the match service publishes
+# via managed identity + the EventGrid Data Sender role (see identity.tf).
+
+# --- Observability ---
+
+output "application_insights_name" {
+  description = "Application Insights resource — open its Application Map for the cross-service trace."
+  value       = azurerm_application_insights.main.name
+}

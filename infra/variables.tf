@@ -27,3 +27,14 @@ variable "owner_email" {
   type        = string
   default     = "rizam.ibrahim.my@gmail.com"
 }
+
+variable "enable_match_event_subscription" {
+  description = <<-EOT
+    Wire the Event Grid topic to the match service's on_emergency_request
+    trigger. Keep false for the first apply — the function must be deployed
+    before the subscription can validate its endpoint. Flip to true only
+    after `func azure functionapp publish` for the match service (runbook 09).
+  EOT
+  type        = bool
+  default     = false
+}

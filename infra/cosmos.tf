@@ -65,39 +65,43 @@ resource "azurerm_cosmosdb_sql_database" "main" {
 }
 
 # ---------------------------------------------------------------------------
-# Containers — one per core entity
+# Containers — one per service
 # ---------------------------------------------------------------------------
 # WARNING: a container's partition key is IMMUTABLE. Changing `partition_key_paths`
 # forces Terraform to destroy and recreate the container (losing its data).
-# Pick deliberately. See runbook 06 "Concepts" for the rationale below.
+#
+# These three containers replace the placeholder set from runbook 06 (donors,
+# requests, matches — all guessed before the application code existed). The
+# partition keys below are the ones the scaffolded services actually use; the
+# first apply after this change destroys the old containers and creates these.
 
-# Donors — partitioned by blood type. The dominant query in matching is
-# "find available donors of blood type X". Trade-off: ABO/Rh has only 8 values
-# (low cardinality), so this risks hot partitions at very large scale.
-# Acceptable for Phase 1 / portfolio scale; flagged in the runbook.
-resource "azurerm_cosmosdb_sql_container" "donors" {
-  name                = "donors"
+# Profiles — user service. Partition key /id: a profile is always read by its
+# own id, giving even key distribution and single-RU point reads.
+resource "azurerm_cosmosdb_sql_container" "profiles" {
+  name                = "profiles"
   resource_group_name = data.azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
   database_name       = azurerm_cosmosdb_sql_database.main.name
-  partition_key_paths = ["/bloodType"]
+  partition_key_paths = ["/id"]
 }
 
-# Requests — also partitioned by blood type, for the same matching query path.
+# Inventory — inventory service. Partition key /geohash_prefix: a region search
+# resolves the 5-char geohash prefix and queries exactly one partition
+# (context.md §8).
+resource "azurerm_cosmosdb_sql_container" "inventory" {
+  name                = "inventory"
+  resource_group_name = data.azurerm_resource_group.main.name
+  account_name        = azurerm_cosmosdb_account.main.name
+  database_name       = azurerm_cosmosdb_sql_database.main.name
+  partition_key_paths = ["/geohash_prefix"]
+}
+
+# Requests — match service. Partition key /id: the Saga orchestrator and the
+# status endpoint both address a request by its id.
 resource "azurerm_cosmosdb_sql_container" "requests" {
   name                = "requests"
   resource_group_name = data.azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
   database_name       = azurerm_cosmosdb_sql_database.main.name
-  partition_key_paths = ["/bloodType"]
-}
-
-# Matches — partitioned by the request they belong to. Reads are almost always
-# "all matches for request X", which then stay single-partition.
-resource "azurerm_cosmosdb_sql_container" "matches" {
-  name                = "matches"
-  resource_group_name = data.azurerm_resource_group.main.name
-  account_name        = azurerm_cosmosdb_account.main.name
-  database_name       = azurerm_cosmosdb_sql_database.main.name
-  partition_key_paths = ["/requestId"]
+  partition_key_paths = ["/id"]
 }

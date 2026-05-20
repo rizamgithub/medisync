@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "ENV": "dev",
+    "LOG_LEVEL": "INFO",
+    "SERVICE_NAME": "inventory",
+    "COSMOS_ENDPOINT": "https://cosmos-medisync-prod-2n3ccl.documents.azure.com:443/",
+    "COSMOS_INVENTORY_DB": "medisync",
+    "COSMOS_INVENTORY_CONTAINER": "inventory",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
+  }
+}
