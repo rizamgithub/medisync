@@ -1,25 +1,31 @@
-# Backend left LOCAL for now. State file lives at infra/terraform.tfstate
-# (gitignored). Upgrade to azurerm backend once we have resources worth
-# protecting and/or CI needs to run apply.
+# ---------------------------------------------------------------------------
+# Remote state — Azure Blob backend
+# ---------------------------------------------------------------------------
+# State lives in an Azure Storage container instead of on a laptop. This gives:
+#   - durability (laptop loss no longer loses the record of what's deployed),
+#   - shared access (CI can run Terraform), and
+#   - locking — the azurerm backend takes a blob *lease* for the duration of
+#     every apply, so two runs can't corrupt state. No separate lock table.
 #
-# Upgrade recipe (when ready):
+# CHICKEN-AND-EGG: the storage account named below is the ONE resource that is
+# intentionally NOT managed by Terraform. Terraform cannot create the storage
+# that holds its own state. It is bootstrapped once with `az` — see runbook 07.
+# Everything else in this repo stays 100% Terraform-managed (context.md rule 3);
+# this single documented exception is the standard pattern for a state backend.
 #
-#   1. As Global Admin, create a storage account + container for state:
-#        az group create -n rg-medisync-tfstate -l southeastasia
-#        az storage account create -n sttfstatemedisync -g rg-medisync-tfstate \
-#          -l southeastasia --sku Standard_LRS --kind StorageV2 \
-#          --allow-blob-public-access false --min-tls-version TLS1_2
-#        az storage container create -n tfstate --account-name sttfstatemedisync
-#   2. Grant medisync-admin "Storage Blob Data Contributor" on the SA.
-#   3. Uncomment the block below.
-#   4. Run: terraform init -migrate-state
-#
-# terraform {
-#   backend "azurerm" {
-#     resource_group_name  = "rg-medisync-tfstate"
-#     storage_account_name = "sttfstatemedisync"
-#     container_name       = "tfstate"
-#     key                  = "medisync.tfstate"
-#     use_oidc             = true   # for GitHub Actions
-#   }
-# }
+# Auth: `use_azuread_auth` makes the backend authenticate with the caller's
+# Azure AD identity (the medisync-admin SP locally, medisync-deploy in CI) via
+# the ARM_* environment variables. No storage account keys are used or stored.
+
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-medisync-prod"
+    storage_account_name = "medisynctfstate2n3ccl"
+    container_name       = "tfstate"
+    key                  = "infra.tfstate"
+    use_azuread_auth     = true
+  }
+}
+
+# infra/probe/ deliberately keeps its own LOCAL state — it's a throwaway smoke
+# test, not worth a remote backend.
