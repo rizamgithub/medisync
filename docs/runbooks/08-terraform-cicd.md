@@ -68,8 +68,10 @@ It adds the two federated credentials (`github-pull-request`, `github-env-produc
 1. Go to your repo on GitHub → **Settings** → **Environments** (left sidebar) → **New environment**.
 2. Name it exactly **`production`** → **Configure environment**.
 3. Under **Deployment protection rules**, tick **Required reviewers**. In the box that appears, add **yourself** (`rizamgithub`). You can add up to 6; one is enough.
-4. *(Optional, recommended)* Under **Deployment branches and tags**, choose **Selected branches and tags** and add a rule for `main`. This stops anything but `main` from deploying to `production`.
-5. Click **Save protection rules**.
+4. **Uncheck "Allow administrators to bypass configured protection rules".** This box is **ticked by default** — and because *you* are the repo admin triggering every deploy, leaving it on lets your applies skip the gate entirely. Untick it or the approval step never appears.
+5. Leave **"Prevent self-review" unchecked.** You are the only reviewer, so you must be allowed to approve your own runs — ticking it would deadlock you.
+6. *(Recommended)* Under **Deployment branches and tags**, choose **Selected branches and tags** and add a rule for `main`. This stops anything but `main` from deploying to `production`.
+7. Click **Save protection rules** — a separate button; changes are not saved until you click it.
 
 The environment name must be **exactly `production`** — it has to match both `terraform-apply.yml` and the `github-env-production` federated credential's subject.
 
@@ -190,7 +192,7 @@ The OIDC token's subject doesn't match any federated credential. Check in **Entr
 Org/repo names are case-sensitive. Re-run `.temp/setup-cicd-azure.ps1` if one is missing.
 
 ### The apply ran without waiting for approval
-The `production` environment has no protection rule, or wasn't created before the workflow ran (GitHub auto-creates an unprotected environment on first reference). Redo Step 2, then re-run the workflow.
+Most likely **"Allow administrators to bypass configured protection rules"** is still ticked on the `production` environment — admins (you) then skip the gate. Untick it and **Save protection rules** (Step 2.4). Other causes: **Required reviewers** isn't ticked/saved, or the environment didn't exist when the workflow first ran (GitHub auto-creates an *unprotected* one on first reference). Redo Step 2 and re-run.
 
 ### `terraform init` fails in CI: `Error: Failed to install provider` / checksum mismatch
 The lock file is missing the Linux checksums. Locally run `terraform providers lock -platform=windows_amd64 -platform=linux_amd64` in `infra/`, commit the updated `.terraform.lock.hcl`, push.
