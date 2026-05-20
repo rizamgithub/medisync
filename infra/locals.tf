@@ -6,6 +6,7 @@ locals {
     environment = var.environment
     owner       = var.owner_email
     managed_by  = "terraform"
+    cost_center = "portfolio"
   }
 }
 
