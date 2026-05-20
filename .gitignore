@@ -38,7 +38,8 @@ out/
 
 # Terraform
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl IS committed on purpose — it pins exact provider
+# versions + checksums so CI and laptops resolve identical providers.
 *.tfstate
 *.tfstate.*
 *.tfplan
