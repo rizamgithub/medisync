@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "ENV": "dev",
+    "LOG_LEVEL": "INFO",
+    "SERVICE_NAME": "user",
+    "COSMOS_ENDPOINT": "https://cosmos-medisync-prod-2n3ccl.documents.azure.com:443/",
+    "COSMOS_USER_DB": "medisync",
+    "COSMOS_USER_CONTAINER": "profiles",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
+  }
+}

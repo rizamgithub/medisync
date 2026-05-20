@@ -30,6 +30,9 @@ env/
 dist/
 build/
 
+# Azure Functions
+local.settings.json
+
 # Node / Next.js
 node_modules/
 .next/
