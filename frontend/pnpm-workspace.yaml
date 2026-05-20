@@ -1,0 +1,5 @@
+# pnpm 11 reads build-script approval from here. Both packages ship prebuilt
+# native binaries; their install scripts are safe to run.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
