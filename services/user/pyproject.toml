@@ -1,0 +1,33 @@
+[project]
+name = "medisync-user-service"
+version = "0.1.0"
+description = "MediSync user service — profiles & auth (Azure Functions, Python v2)."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "azure-functions>=1.21.0",
+    "azure-cosmos>=4.9.0",
+    "azure-identity>=1.19.0",
+    "azure-monitor-opentelemetry>=1.6.0",
+    "pydantic[email]>=2.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+]
+
+[tool.uv]
+# This is a deployable Function App, not an installable library.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,13 @@
+{
+  "name": "medisync-tooling",
+  "private": true,
+  "description": "Root-level dev tooling (BA diagram rendering). App code lives in frontend/ and services/.",
+  "type": "module",
+  "scripts": {
+    "render:diagrams": "node scripts/render-ba-diagrams.mjs"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

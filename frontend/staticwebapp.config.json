@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemas.azure.com/staticwebapp.config.json",
+  "responseOverrides": {
+    "404": { "rewrite": "/404.html" }
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY"
+  }
+}

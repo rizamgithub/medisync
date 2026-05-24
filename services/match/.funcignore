@@ -1,0 +1,10 @@
+.git*
+.venv/
+.vscode/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+tests/
+local.settings.json
+pyproject.toml
+README.md
