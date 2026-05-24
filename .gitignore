@@ -33,11 +33,18 @@ build/
 # Azure Functions
 local.settings.json
 
+# Vendored shared package — source of truth is packages/shared/;
+# (re)created by scripts/sync-shared.ps1
+services/*/medisync_shared/
+
 # Node / Next.js
 node_modules/
 .next/
 out/
 .turbo/
+
+# BA diagram render — intermediate .mmd files (SVGs ARE committed for portability)
+docs/ba/**/flows/*.mmd
 
 # Terraform
 .terraform/
