@@ -71,6 +71,14 @@ def test_reserve_transitions_status_and_bumps_timestamp() -> None:
     assert reserved.id == item.id
 
 
+def test_release_transitions_status_back_to_available() -> None:
+    item = InventoryItem.from_create(InventoryCreate.model_validate(_blood_item()))
+    released = item.reserve("REQ-42").release()
+    assert released.status is InventoryStatus.AVAILABLE
+    assert released.reserved_by is None
+    assert released.id == item.id
+
+
 def test_item_tolerates_cosmos_system_fields() -> None:
     item = InventoryItem.from_create(InventoryCreate.model_validate(_blood_item()))
     raw = item.model_dump(mode="json")

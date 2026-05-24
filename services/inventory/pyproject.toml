@@ -28,6 +28,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.isort]
+# medisync_shared is vendored in by scripts/sync-shared.ps1 — treat it as
+# first-party so its import group is stable regardless of sync timing.
+known-first-party = ["medisync_shared"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

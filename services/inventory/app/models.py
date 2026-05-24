@@ -137,3 +137,13 @@ class InventoryItem(BaseModel):
                 "updated_at": _utcnow(),
             }
         )
+
+    def release(self) -> InventoryItem:
+        """Return a copy transitioned Reserved → Available (Saga compensation)."""
+        return self.model_copy(
+            update={
+                "status": InventoryStatus.AVAILABLE,
+                "reserved_by": None,
+                "updated_at": _utcnow(),
+            }
+        )

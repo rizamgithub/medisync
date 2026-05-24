@@ -7,7 +7,10 @@ wire the match Saga end to end.
 
 **Prerequisites:** runbooks 01–08 complete. The Terraform for this runbook
 already exists in `infra/` (`functions.tf`, `identity.tf`, `eventgrid.tf`,
-updated `cosmos.tf`). The three services are scaffolded under `services/`.
+updated `cosmos.tf`). The three services are scaffolded under `services/`. The
+match and inventory services depend on the shared `medisync_shared` package,
+which is **vendored** into each deploy bundle by `scripts/sync-shared.ps1`
+(Step 4 runs it).
 
 **What gets created**
 
@@ -121,8 +124,9 @@ no local apply needed.
    Then open the PR on GitHub.
 2. `terraform-plan.yml` posts the plan as a PR comment. **Review it.** Expect:
    `donors` and `matches` **destroyed**, `requests` **replaced**, and ~13
-   resources **added**. `enable_match_event_subscription` is `false`, so the
-   Event Grid *subscription* is **not** in this plan — correct (see Step 5).
+   resources **added**. Both `enable_*_event_subscription` toggles are `false`,
+   so the two Event Grid *subscriptions* are **not** in this plan — correct
+   (see Step 5).
 3. Merge the PR. `terraform-apply.yml` runs under the `production`
    environment and pauses for approval. Approve it. The apply takes 3–5
    minutes (Function Apps are the slow part).
@@ -142,22 +146,29 @@ no local apply needed.
 Each Function App now exists but is **empty**. Publish the scaffolded code with
 the Core Tools (remote build installs `requirements.txt` via Oryx).
 
-Make sure you are signed in (`az login`), then from the repo root:
+1. **Vendor the shared package.** The match and inventory services import
+   `medisync_shared`, which is gitignored and must be copied into each service
+   folder before publishing. From the repo root:
+   ```
+   pwsh scripts/sync-shared.ps1
+   ```
+   (Windows PowerShell: `powershell -File scripts\sync-shared.ps1`.)
+2. Make sure you are signed in (`az login`), then publish each service.
+   Run each command from **inside** the matching service folder
+   (`services/user`, `services/inventory`, `services/match`) — `func` publishes
+   the current directory:
+   ```
+   func azure functionapp publish medisync-prod-user-func-2n3ccl
+   ```
+   ```
+   func azure functionapp publish medisync-prod-inventory-func-2n3ccl
+   ```
+   ```
+   func azure functionapp publish medisync-prod-match-func-2n3ccl
+   ```
 
-```
-func azure functionapp publish medisync-prod-user-func-2n3ccl
-```
-```
-func azure functionapp publish medisync-prod-inventory-func-2n3ccl
-```
-```
-func azure functionapp publish medisync-prod-match-func-2n3ccl
-```
-
-Run each from inside the matching service folder (`services/user`,
-`services/inventory`, `services/match`) — `func` publishes the current
-directory. Each publish prints the deployed functions; confirm the counts:
-user **4**, inventory **4**, match **10**.
+Each publish prints the deployed functions; confirm the counts:
+user **4**, inventory **5** (4 HTTP + `on_reservation_released`), match **10**.
 
 Smoke-test the HTTP health probes (no auth — the apps are `ANONYMOUS`):
 
@@ -169,23 +180,29 @@ Expect `{"status": "ok", "service": "user"}`. Repeat for inventory and match.
 
 ---
 
-## Step 5 — Wire the Event Grid subscription
+## Step 5 — Wire the Event Grid subscriptions
 
-Now that `on_emergency_request` exists in the deployed match app, Event Grid
-can validate it. Flip the toggle and apply again.
+Now that `on_emergency_request` (match) and `on_reservation_released`
+(inventory) exist in the deployed apps, Event Grid can validate both endpoints.
+Flip the two toggles and apply again.
 
-1. In `infra/variables.tf`, change the `enable_match_event_subscription`
-   default from `false` to `true`.
+1. In `infra/variables.tf`, change **both** defaults from `false` to `true`:
+   `enable_match_event_subscription` and `enable_inventory_event_subscription`.
 2. PR it the same way as Step 3:
    ```
-   git checkout -b feat/enable-match-subscription
+   git checkout -b feat/enable-event-subscriptions
    ```
    ```
-   git commit -am "infra: enable EmergencyRequestCreated -> match subscription"
+   git commit -am "infra: enable event grid subscriptions (match + inventory)"
    ```
-   Open the PR, review the plan (one resource added —
-   `azurerm_eventgrid_event_subscription.emergency_request_to_match[0]`),
+   Open the PR, review the plan (two resources added —
+   `azurerm_eventgrid_event_subscription.emergency_request_to_match[0]` and
+   `azurerm_eventgrid_event_subscription.reservation_released_to_inventory[0]`),
    merge, approve the apply.
+
+The two subscriptions complete the Saga: `EmergencyRequestCreated` starts the
+match orchestrator, and `ReservationReleased` drives the inventory-side
+compensation that returns a rolled-back unit to `Available`.
 
 ---
 

@@ -16,10 +16,10 @@ import logging
 import azure.functions as func
 from pydantic import ValidationError
 
-from app.events import EmergencyRequestData, EventType
 from app.models import EmergencyRequestCreate, MatchRecord
 from app.publisher import get_publisher
 from app.repository import get_repository
+from medisync_shared.events import EmergencyRequestData, EventType
 
 log = logging.getLogger("medisync.match")
 

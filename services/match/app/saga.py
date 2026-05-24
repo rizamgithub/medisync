@@ -22,17 +22,17 @@ from typing import Any
 import azure.durable_functions as df
 import azure.functions as func
 
-from app.events import (
-    EventType,
-    MatchFailedData,
-    MatchFoundData,
-    ReservationReleasedData,
-)
 from app.inventory_client import get_inventory_client
 from app.matching import select_best_unit
 from app.models import BloodType, MatchStatus
 from app.publisher import get_publisher
 from app.repository import get_repository
+from medisync_shared.events import (
+    EventType,
+    MatchFailedData,
+    MatchFoundData,
+    ReservationReleasedData,
+)
 
 log = logging.getLogger("medisync.match")
 
@@ -62,7 +62,9 @@ def match_orchestrator(context: df.DurableOrchestrationContext):
     """The Saga orchestrator — deterministic; all I/O happens in activities."""
     request: dict[str, Any] = context.get_input()
     request_id = request["request_id"]
-    reserved_inventory_id: str | None = None
+    # The unit once it is successfully reserved — needed for compensation,
+    # which must address it by id *and* geohash_prefix (its partition key).
+    reserved_unit: dict[str, Any] | None = None
 
     try:
         unit = yield context.call_activity("find_inventory", request)
@@ -78,7 +80,7 @@ def match_orchestrator(context: df.DurableOrchestrationContext):
             return {"request_id": request_id, "status": MatchStatus.NO_MATCH.value}
 
         yield context.call_activity("reserve_inventory", {"request": request, "unit": unit})
-        reserved_inventory_id = unit["id"]
+        reserved_unit = unit
 
         yield context.call_activity("notify_parties", {"request": request, "unit": unit})
         yield context.call_activity(
@@ -86,23 +88,24 @@ def match_orchestrator(context: df.DurableOrchestrationContext):
             {
                 "request_id": request_id,
                 "status": MatchStatus.MATCHED.value,
-                "inventory_id": reserved_inventory_id,
+                "inventory_id": reserved_unit["id"],
             },
         )
         return {
             "request_id": request_id,
             "status": MatchStatus.MATCHED.value,
-            "inventory_id": reserved_inventory_id,
+            "inventory_id": reserved_unit["id"],
         }
     except Exception as exc:
         # Saga compensation path: undo the reservation if one was made.
         reason = str(exc) or exc.__class__.__name__
-        if reserved_inventory_id is not None:
+        if reserved_unit is not None:
             yield context.call_activity(
                 "release_reservation",
                 {
                     "request_id": request_id,
-                    "inventory_id": reserved_inventory_id,
+                    "inventory_id": reserved_unit["id"],
+                    "geohash_prefix": reserved_unit["geohash_prefix"],
                     "reason": reason,
                 },
             )
@@ -184,10 +187,10 @@ def complete_match(payload: dict[str, Any]) -> None:
 
 @bp.activity_trigger(input_name="payload")
 def release_reservation(payload: dict[str, Any]) -> None:
-    """Saga compensation — publish ReservationReleased for auditability.
+    """Saga compensation — publish ReservationReleased.
 
-    The inventory service should subscribe to this event to flip the unit
-    back to Available (TODO: inventory-side ReservationReleased handler).
+    The inventory service subscribes to this event and flips the unit back to
+    Available (see services/inventory/app/subscriber.py).
     """
     get_publisher().publish(
         EventType.RESERVATION_RELEASED,
@@ -195,6 +198,7 @@ def release_reservation(payload: dict[str, Any]) -> None:
         data=ReservationReleasedData(
             request_id=payload["request_id"],
             inventory_id=payload["inventory_id"],
+            geohash_prefix=payload["geohash_prefix"],
             reason=payload["reason"],
         ),
     )

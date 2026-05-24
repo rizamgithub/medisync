@@ -39,9 +39,13 @@ activity function (context.md §8).
 
 ## Event contracts (context.md §6)
 
-Namespaced, PascalCase, past-tense. Pydantic-typed in `app/events.py`:
+Namespaced, PascalCase, past-tense:
 `MediSync.EmergencyRequestCreated` · `MediSync.MatchFound` ·
 `MediSync.MatchFailed` · `MediSync.ReservationReleased`.
+
+The Pydantic schemas live in the shared **`medisync_shared`** package
+(`packages/shared/`), vendored into this service by `scripts/sync-shared.ps1`
+so they ship in the deploy bundle — see `packages/shared/README.md`.
 
 ## Layout
 
@@ -50,11 +54,11 @@ services/match/
 ├── function_app.py            ← df.DFApp entry point; registers both blueprints
 ├── host.json                  ← + durableTask hub config
 ├── .funcignore · local.settings.example.json · pyproject.toml · requirements.txt
+├── medisync_shared/           ← vendored shared package (gitignored — sync-shared.ps1)
 ├── app/
 │   ├── config.py              ← env-var settings
-│   ├── models.py              ← EmergencyRequestCreate, MatchRecord, enums
+│   ├── models.py              ← EmergencyRequestCreate, MatchRecord, MatchStatus
 │   ├── matching.py            ← blood-type compatibility + unit selection (pure)
-│   ├── events.py              ← Event Grid event contracts (Pydantic)
 │   ├── publisher.py           ← Event Grid publisher (DefaultAzureCredential)
 │   ├── inventory_client.py    ← HTTP client → inventory service
 │   ├── repository.py          ← Cosmos `requests` container access
@@ -64,12 +68,13 @@ services/match/
 └── tests/
     ├── test_matching.py       ← blood compatibility + selection
     ├── test_models.py         ← request/record schemas
-    └── test_events.py         ← event contracts
+    └── test_events.py         ← event contracts (medisync_shared)
 ```
 
 ## Local development
 
 ```powershell
+pwsh ..\..\scripts\sync-shared.ps1       # vendor medisync_shared (first run / after edits)
 # from services/match/
 uv sync
 Copy-Item local.settings.example.json local.settings.json   # then edit values
@@ -93,11 +98,3 @@ uv run ruff format .     # format
   Entra External ID JWT validation (context.md §8), pending the Entra runbook.
 - **Email.** `notify_parties` has a `TODO(acs-email)` — Azure Communication
   Services Email needs a verified domain (future runbook).
-- **Compensation completeness.** `release_reservation` publishes
-  `ReservationReleased`; the inventory service still needs a subscriber that
-  flips the unit back to `Available`.
-- **Shared event package.** `app/events.py` should move to `packages/shared/`
-  once another service produces/consumes events (context.md §5, §9).
-- **Infrastructure.** Function App, Storage account, Managed Identity, the
-  Event Grid topic + subscription, and the `requests` Cosmos container are not
-  in `infra/` yet.

@@ -13,26 +13,23 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# BloodType / Urgency / GeoLocation are shared event-payload types — they live
+# in the vendored medisync_shared package (context.md §5, §9). MatchStatus
+# below is match-specific and stays here.
+from medisync_shared.domain import BloodType, GeoLocation, Urgency
+
+__all__ = [
+    "BloodType",
+    "EmergencyRequestCreate",
+    "GeoLocation",
+    "MatchRecord",
+    "MatchStatus",
+    "Urgency",
+]
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
-
-
-class BloodType(StrEnum):
-    O_POSITIVE = "O+"
-    O_NEGATIVE = "O-"
-    A_POSITIVE = "A+"
-    A_NEGATIVE = "A-"
-    B_POSITIVE = "B+"
-    B_NEGATIVE = "B-"
-    AB_POSITIVE = "AB+"
-    AB_NEGATIVE = "AB-"
-
-
-class Urgency(StrEnum):
-    CRITICAL = "Critical"
-    HIGH = "High"
-    STANDARD = "Standard"
 
 
 class MatchStatus(StrEnum):
@@ -40,13 +37,6 @@ class MatchStatus(StrEnum):
     MATCHED = "Matched"
     NO_MATCH = "NoMatch"
     FAILED = "Failed"
-
-
-class GeoLocation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    lat: float = Field(ge=-90.0, le=90.0)
-    lng: float = Field(ge=-180.0, le=180.0)
 
 
 class EmergencyRequestCreate(BaseModel):

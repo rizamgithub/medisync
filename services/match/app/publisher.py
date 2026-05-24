@@ -15,7 +15,7 @@ from azure.identity import DefaultAzureCredential
 from pydantic import BaseModel
 
 from app.config import get_settings
-from app.events import EVENT_DATA_VERSION, EventType
+from medisync_shared.events import EVENT_DATA_VERSION, EventType
 
 log = logging.getLogger("medisync.match")
 

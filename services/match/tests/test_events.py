@@ -1,11 +1,11 @@
-"""Unit tests for the Event Grid event contracts."""
+"""Unit tests for the shared Event Grid event contracts (medisync_shared)."""
 
 from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
 
-from app.events import (
+from medisync_shared.events import (
     EmergencyRequestData,
     EventType,
     MatchFailedData,
@@ -61,6 +61,15 @@ def test_match_found_data_fields() -> None:
 def test_failed_and_released_data_construct() -> None:
     assert MatchFailedData(request_id="REQ-1", reason="no stock").reason == "no stock"
     released = ReservationReleasedData(
-        request_id="REQ-1", inventory_id="INV-1", reason="reserve timeout"
+        request_id="REQ-1",
+        inventory_id="INV-1",
+        geohash_prefix="w21z9",
+        reason="reserve timeout",
     )
     assert released.inventory_id == "INV-1"
+    assert released.geohash_prefix == "w21z9"
+
+
+def test_reservation_released_data_requires_geohash_prefix() -> None:
+    with pytest.raises(ValidationError):
+        ReservationReleasedData(request_id="REQ-1", inventory_id="INV-1", reason="x")

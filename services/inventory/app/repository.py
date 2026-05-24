@@ -102,6 +102,46 @@ class InventoryRepository:
         log.info("inventory reserved id=%s request=%s", item_id, request_id)
         return reserved
 
+    def release(self, item_id: str, geohash_prefix: str, request_id: str) -> bool:
+        """Flip a reserved unit back to Available — the Saga compensation step.
+
+        Idempotent by design: Event Grid delivers at-least-once, so a duplicate
+        ``ReservationReleased`` event is expected. Returns ``True`` only when it
+        performed the transition; a no-op — item gone, already Available, or
+        reserved by a *different* request — returns ``False``. A genuine ETag
+        race raises ``InventoryVersionConflictError`` so the caller can let
+        Event Grid redeliver.
+        """
+        try:
+            raw = self._container.read_item(item=item_id, partition_key=geohash_prefix)
+        except exceptions.CosmosResourceNotFoundError:
+            log.warning("release: inventory id=%s absent in partition %s", item_id, geohash_prefix)
+            return False
+
+        item = InventoryItem.model_validate(raw)
+        if item.status is not InventoryStatus.RESERVED or item.reserved_by != request_id:
+            log.info(
+                "release no-op id=%s status=%s reserved_by=%s (wanted Reserved by %s)",
+                item_id,
+                item.status.value,
+                item.reserved_by,
+                request_id,
+            )
+            return False
+
+        available = item.release()
+        try:
+            self._container.replace_item(
+                item=item_id,
+                body=available.model_dump(mode="json"),
+                etag=raw["_etag"],
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except exceptions.CosmosAccessConditionFailedError as exc:
+            raise InventoryVersionConflictError(item_id) from exc
+        log.info("inventory released id=%s request=%s", item_id, request_id)
+        return True
+
 
 @lru_cache(maxsize=1)
 def get_repository() -> InventoryRepository:

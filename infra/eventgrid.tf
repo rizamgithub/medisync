@@ -4,9 +4,10 @@
 # `terraform apply` (runbook 09, Step 1).
 #
 # The match service publishes MediSync.EmergencyRequestCreated / MatchFound /
-# MatchFailed / ReservationReleased to this topic (context.md §6). The
-# subscription below routes EmergencyRequestCreated back to the match service's
-# Durable starter to begin the Saga.
+# MatchFailed / ReservationReleased to this topic (context.md §6). Two
+# subscriptions route events back to functions:
+#   * EmergencyRequestCreated -> match service's Durable starter (begins Saga)
+#   * ReservationReleased     -> inventory service's compensation handler
 
 resource "azurerm_eventgrid_topic" "main" {
   name                = "${local.name_prefix}-events"
@@ -40,6 +41,34 @@ resource "azurerm_eventgrid_event_subscription" "emergency_request_to_match" {
 
   # Drop events that still fail after the retry window rather than letting an
   # undeliverable event keep retrying for the 24h default.
+  retry_policy {
+    max_delivery_attempts = 10
+    event_time_to_live    = 60 # minutes
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Subscription: ReservationReleased -> inventory service compensation handler
+# ---------------------------------------------------------------------------
+# Closes the match Saga's compensation loop: when the match service rolls back
+# a reservation it publishes ReservationReleased, and the inventory service's
+# `on_reservation_released` function flips that unit back to Available.
+#
+# Same chicken-and-egg as the subscription above — the function must be
+# DEPLOYED before Event Grid can validate the endpoint, so it sits behind its
+# own toggle (runbook 09, Step 5).
+resource "azurerm_eventgrid_event_subscription" "reservation_released_to_inventory" {
+  count = var.enable_inventory_event_subscription ? 1 : 0
+
+  name  = "reservation-released"
+  scope = azurerm_eventgrid_topic.main.id
+
+  included_event_types = ["MediSync.ReservationReleased"]
+
+  azure_function_endpoint {
+    function_id = "${azurerm_linux_function_app.inventory.id}/functions/on_reservation_released"
+  }
+
   retry_policy {
     max_delivery_attempts = 10
     event_time_to_live    = 60 # minutes
